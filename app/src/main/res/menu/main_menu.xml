@@ -36,4 +36,26 @@
             android:icon="@drawable/icon_about" 
             android:title="@string/about" />
     </group>
+    <group android:id="@+id/group_game_stores" android:checkableBehavior="none">
+        <item
+            android:id="@+id/main_menu_gog"
+            android:icon="@drawable/icon_open"
+            android:title="GOG" />
+        <item
+            android:id="@+id/main_menu_epic"
+            android:icon="@drawable/icon_open"
+            android:title="Epic Games" />
+        <item
+            android:id="@+id/main_menu_amazon"
+            android:icon="@drawable/icon_open"
+            android:title="Amazon Games" />
+        <item
+            android:id="@+id/main_menu_steam"
+            android:icon="@drawable/icon_open"
+            android:title="Steam" />
+        <item
+            android:id="@+id/main_menu_downloads"
+            android:icon="@drawable/icon_popup_menu_download"
+            android:title="Downloads" />
+    </group>
 </menu>
