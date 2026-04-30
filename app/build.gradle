@@ -12,7 +12,7 @@ buildscript {
     dependencies {
         // Adjust Gradle plugin versions if needed
         classpath 'com.android.tools.build:gradle:8.8.0'
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.0'
     }
 
 }
@@ -160,7 +160,23 @@ dependencies {
     implementation 'com.kohlschutter.junixsocket:junixsocket-common:2.6.0'
     implementation 'com.kohlschutter.junixsocket:junixsocket-native-common:2.6.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.11.0'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.0"
+
+    // JavaSteam (built from source by CI pre-step, placed in app/libs/)
+    implementation files('libs/javasteam.jar')
+    implementation files('libs/javasteam-depotdownloader.jar')
+
+    // JavaSteam transitive dependencies
+    implementation 'com.google.protobuf:protobuf-java:4.31.1'
+    implementation 'org.apache.commons:commons-lang3:3.18.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
+    implementation 'com.squareup.okio:okio:3.16.0'
+    implementation 'io.ktor:ktor-client-core:3.2.2'
+    implementation 'io.ktor:ktor-client-cio:3.2.2'
+    implementation 'io.ktor:ktor-client-websockets:3.2.2'
+
+    // QR code generation (QrLoginActivity)
+    implementation 'com.google.zxing:core:3.5.2'
 }
 
 

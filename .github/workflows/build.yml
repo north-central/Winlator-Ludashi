@@ -32,6 +32,49 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
+    - name: Build JavaSteam from source
+      run: |
+        git clone --depth 1 -b gamenative-latest https://github.com/joshuatam/JavaSteam javasteam_src
+        cd javasteam_src
+
+        # Patch HardwareUtils: IS_OS_ANDROID not in commons-lang3 3.14
+        find . -name "HardwareUtils.java" -exec sed -i 's/SystemUtils\.IS_OS_ANDROID/false/g' {} \; 2>/dev/null || true
+
+        # Patch Utils: newer SystemUtils OS fields not in commons-lang3 bundled by older APKs
+        find . -name "Utils.java" -path "*/javasteam/*" -exec sed -i \
+          -e 's/SystemUtils\.IS_OS_MAC_OSX_SONOMA/false/g' \
+          -e 's/SystemUtils\.IS_OS_MAC_OSX_VENTURA/false/g' \
+          -e 's/SystemUtils\.IS_OS_MAC_OSX_MONTEREY/false/g' \
+          -e 's/SystemUtils\.IS_OS_MAC_OSX_BIG_SUR/false/g' \
+          -e 's/SystemUtils\.IS_OS_WINDOWS_11/false/g' {} \; 2>/dev/null || true
+
+        ./gradlew jar --no-daemon 2>&1 | tail -30
+
+        echo "=== Built JARs ==="
+        find . -name "*.jar" -path "*/build/libs/*" ! -name "*sources*" ! -name "*javadoc*"
+
+        # Find main jar (contains SteamClient)
+        MAIN_JAR=$(for j in $(find . -name "*.jar" -path "*/build/libs/*" \
+            ! -name "*sources*" ! -name "*javadoc*" | sort); do
+          jar tf "$j" 2>/dev/null | grep -q "SteamClient.class" && echo "$j" && break
+        done)
+        [ -z "$MAIN_JAR" ] && MAIN_JAR=$(find . -name "javasteam-*.jar" -path "*/build/libs/*" \
+          ! -name "*sources*" ! -name "*javadoc*" | sort | head -1)
+
+        mkdir -p ../app/libs
+        cp "$MAIN_JAR" ../app/libs/javasteam.jar
+        echo "Copied main jar: $MAIN_JAR ($(du -sh "$MAIN_JAR" | cut -f1))"
+
+        DD_JAR=$(find . -name "javasteam-depotdownloader-*.jar" -path "*/build/libs/*" \
+          ! -name "*sources*" ! -name "*javadoc*" | head -1)
+        if [ -n "$DD_JAR" ]; then
+          cp "$DD_JAR" ../app/libs/javasteam-depotdownloader.jar
+          echo "Copied depotdownloader jar: $DD_JAR ($(du -sh "$DD_JAR" | cut -f1))"
+        else
+          touch ../app/libs/javasteam-depotdownloader.jar
+          echo "WARNING: depotdownloader jar not found, using empty placeholder"
+        fi
+
     - name: Build with Gradle
       run: ./gradlew assembleDebug
 
