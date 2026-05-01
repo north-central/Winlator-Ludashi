@@ -71,6 +71,9 @@ jobs:
         # Application ID
         sed -i 's/applicationId "com.winlator.cmod"/applicationId "com.ludashi.benchmark"/' app/build.gradle
 
+        # Disable PNG crunching — ab_gear_*.png are APNGs, release builds fail without this
+        sed -i '/^android {/a\    aaptOptions { cruncherEnabled false }' app/build.gradle
+
         # Provider authorities in AndroidManifest
         sed -i 's/com\.winlator\.cmod\.tileprovider/com.ludashi.benchmark.tileprovider/g' app/src/main/AndroidManifest.xml
         sed -i 's/com\.winlator\.cmod\.core\.WinlatorFilesProvider/com.ludashi.benchmark.core.WinlatorFilesProvider/g' app/src/main/AndroidManifest.xml
