@@ -1,0 +1,117 @@
+name: Build LudashiPlus
+
+on:
+  push:
+    branches: [ plus ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Clone linkernsbypass
+      run: |
+        mkdir -p app/src/main/cpp/adrenotools/lib
+        git clone https://github.com/Pipetto-crypto/liblinkernsbypass.git app/src/main/cpp/adrenotools/lib/linkernsbypass
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Install Shader Compiler
+      run: sudo apt-get update && sudo apt-get install -y glslang-tools
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build JavaSteam from source
+      run: |
+        git clone --depth 1 -b gamenative-latest https://github.com/joshuatam/JavaSteam javasteam_src
+        cd javasteam_src
+
+        find . -name "HardwareUtils.java" -exec sed -i 's/SystemUtils\.IS_OS_ANDROID/false/g' {} \; 2>/dev/null || true
+
+        find . -name "Utils.java" -path "*/javasteam/*" -exec sed -i \
+          -e 's/SystemUtils\.IS_OS_MAC_OSX_SONOMA/false/g' \
+          -e 's/SystemUtils\.IS_OS_MAC_OSX_VENTURA/false/g' \
+          -e 's/SystemUtils\.IS_OS_MAC_OSX_MONTEREY/false/g' \
+          -e 's/SystemUtils\.IS_OS_MAC_OSX_BIG_SUR/false/g' \
+          -e 's/SystemUtils\.IS_OS_WINDOWS_11/false/g' {} \; 2>/dev/null || true
+
+        ./gradlew jar --no-daemon 2>&1 | tail -30
+
+        MAIN_JAR=$(for j in $(find . -name "*.jar" -path "*/build/libs/*" \
+            ! -name "*sources*" ! -name "*javadoc*" | sort); do
+          jar tf "$j" 2>/dev/null | grep -q "SteamClient.class" && echo "$j" && break
+        done)
+        [ -z "$MAIN_JAR" ] && MAIN_JAR=$(find . -name "javasteam-*.jar" -path "*/build/libs/*" \
+          ! -name "*sources*" ! -name "*javadoc*" | sort | head -1)
+
+        mkdir -p ../app/libs
+        cp "$MAIN_JAR" ../app/libs/javasteam.jar
+
+        DD_JAR=$(find . -name "javasteam-depotdownloader-*.jar" -path "*/build/libs/*" \
+          ! -name "*sources*" ! -name "*javadoc*" | head -1)
+        if [ -n "$DD_JAR" ]; then
+          cp "$DD_JAR" ../app/libs/javasteam-depotdownloader.jar
+        else
+          touch ../app/libs/javasteam-depotdownloader.jar
+        fi
+
+    - name: Patch package name to com.ludashi.benchmark
+      run: |
+        # Application ID
+        sed -i 's/applicationId "com.winlator.cmod"/applicationId "com.ludashi.benchmark"/' app/build.gradle
+
+        # Provider authorities in AndroidManifest
+        sed -i 's/com\.winlator\.cmod\.tileprovider/com.ludashi.benchmark.tileprovider/g' app/src/main/AndroidManifest.xml
+        sed -i 's/com\.winlator\.cmod\.core\.WinlatorFilesProvider/com.ludashi.benchmark.core.WinlatorFilesProvider/g' app/src/main/AndroidManifest.xml
+
+    - name: Build release APK (unsigned)
+      run: ./gradlew assembleRelease
+
+    - name: Generate testkey
+      run: |
+        keytool -genkeypair -v \
+          -keystore testkey.jks \
+          -alias testkey \
+          -keyalg RSA -keysize 2048 \
+          -validity 10000 \
+          -storepass testkey \
+          -keypass testkey \
+          -dname "CN=Android,O=Android,C=US"
+
+    - name: Zipalign and sign with testkey (V1+V2+V3)
+      run: |
+        BUILD_TOOLS=$ANDROID_SDK_ROOT/build-tools/$(ls $ANDROID_SDK_ROOT/build-tools | sort -V | tail -1)
+
+        $BUILD_TOOLS/zipalign -v -p 4 \
+          app/build/outputs/apk/release/app-release-unsigned.apk \
+          app-aligned.apk
+
+        $BUILD_TOOLS/apksigner sign \
+          --ks testkey.jks \
+          --ks-key-alias testkey \
+          --ks-pass pass:testkey \
+          --key-pass pass:testkey \
+          --v1-signing-enabled true \
+          --v2-signing-enabled true \
+          --v3-signing-enabled true \
+          --out LudashiPlus-3.0.apk \
+          app-aligned.apk
+
+    - name: Upload LudashiPlus-3.0.apk
+      uses: actions/upload-artifact@v4
+      with:
+        name: LudashiPlus-3.0
+        path: LudashiPlus-3.0.apk
