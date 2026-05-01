@@ -1,8 +1,6 @@
 name: Build LudashiPlus
 
 on:
-  push:
-    branches: [ plus ]
   workflow_dispatch:
 
 permissions:
