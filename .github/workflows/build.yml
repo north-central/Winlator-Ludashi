@@ -46,8 +46,9 @@ jobs:
     - name: "List files"
       run: |
         ls -la app/src/main/assets
+        
     - name: "Create Release"
-      uses: softprops/action-gh-release@v3
+      uses: softprops/action-gh-release@v2
       with:
         name: "Winlator-Ludashi ${{ env.VERSION }}-(git-${{ env.SHORT_SHA }})"
         tag_name: ${{ env.SHORT_SHA }}
