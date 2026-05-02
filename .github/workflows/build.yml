@@ -47,10 +47,8 @@ jobs:
       run: |
         ls -la app/src/main/assets
         
-    - name: "Create Release"
-      uses: softprops/action-gh-release@v2
+    - name: Upload APK
+      uses: actions/upload-artifact@v6
       with:
-        name: "Winlator-Ludashi ${{ env.VERSION }}-(git-${{ env.SHORT_SHA }})"
-        tag_name: ${{ env.SHORT_SHA }}
-        prerelease: false
-        files: ./app/build/outputs/apk/debug/app-debug.apk
+       name: Winlator APK
+       path: app/build/outputs/apk/debug/app-debug.apk
